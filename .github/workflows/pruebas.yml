@@ -1,0 +1,51 @@
+# Ejecuta la suite de pruebas en equipos limpios de Windows y Linux con Python 3.13.
+# Las pruebas que requieren Ollama local (marca "vivo") quedan fuera por diseño (pytest.ini).
+name: Pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pruebas:
+    name: pytest (${{ matrix.os }}, Python 3.13)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    steps:
+      - name: Obtener el codigo
+        uses: actions/checkout@v4
+
+      - name: Verificar la integridad del CSV
+        shell: bash
+        run: |
+          esperado=5d77ea4853e443cf8447fca0f3089b7689e5469225cb68f72b2b9feea5f2d0d2
+          calculado=$(python3 -c "import hashlib;print(hashlib.sha256(open('data/incident_event_log.csv','rb').read()).hexdigest())" 2>/dev/null || python -c "import hashlib;print(hashlib.sha256(open('data/incident_event_log.csv','rb').read()).hexdigest())")
+          echo "SHA-256: $calculado"
+          test "$calculado" = "$esperado"
+
+      - name: Instalar Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+          python -m pip check
+
+      - name: Ejecutar pruebas
+        run: python -m pytest -q
+
+      - name: Validar datos del CSV completo
+        run: python -m scripts.validar_datos

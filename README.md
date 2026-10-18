@@ -1,5 +1,9 @@
 # Análisis de incidentes TI con un agente local
 
+[![Pruebas](https://github.com/Alexis-VsCode/ProyectoFinal-Incidentes-Ollama-C2026P1/actions/workflows/pruebas.yml/badge.svg)](https://github.com/Alexis-VsCode/ProyectoFinal-Incidentes-Ollama-C2026P1/actions/workflows/pruebas.yml)
+
+Página del proyecto: https://alexis-vscode.github.io/ProyectoFinal-Incidentes-Ollama-C2026P1/
+
 Proyecto Final Integrador de *Paradigmas de Programación para Inteligencia Artificial y Análisis de
 Datos* (Universidad Casa Grande, Maestría en Inteligencia Artificial y Ciencia de Datos, C2026 P1).
 
