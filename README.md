@@ -28,7 +28,7 @@ modelo predictivo ni análisis de causa raíz.
 | Nombre | Incident Response Log, versión 2 (Vipul Shinde, Kaggle) |
 | Enlace | https://www.kaggle.com/datasets/vipulshinde/incident-response-log/versions/2 |
 | Fuente original | Amaral, C., Fantinato, M. y Peres, S. (2018). *Incident management process enriched event log*. UCI Machine Learning Repository. https://doi.org/10.24432/C57S4H |
-| Licencias | La metadata de Kaggle declara CC0; la ficha de UCI declara CC BY 4.0. Se cita a ambas fuentes |
+| Licencias | Los metadatos de Kaggle declaran CC0; la ficha de UCI declara CC BY 4.0. Se cita a ambas fuentes |
 | Archivo | `data/incident_event_log.csv`, 39.147.503 bytes |
 | SHA-256 | `5d77ea4853e443cf8447fca0f3089b7689e5469225cb68f72b2b9feea5f2d0d2` |
 | Contenido | 119.998 eventos, 36 columnas, 20.769 incidentes únicos |
@@ -122,7 +122,7 @@ repositorio y nunca se versionan.
 
 Abre http://127.0.0.1:8501. Para detenerla, `Ctrl+C` en la terminal.
 
-La primera vez, Streamlit puede pedir un correo electrónico en la terminal ("Email:"). No es
+La primera vez, Streamlit puede pedir un correo electrónico en la terminal («Email:»). No es
 obligatorio: basta con presionar Enter.
 
 En las siguientes sesiones puedes hacer doble clic en `iniciar.bat`, que arranca la aplicación con
@@ -197,11 +197,10 @@ modelo y el filtro de prioridades. Todas las pestañas usan la misma selección.
 
 ## Cómo funciona el agente
 
-La regla es simple: **Python calcula y el modelo interpreta.** El modelo nunca recibe el CSV y
-nunca calcula una cifra.
+Python calcula y el modelo interpreta. El modelo nunca recibe el CSV ni calcula ninguna cifra.
 
 1. **Guarda previa.** Antes de llamar al modelo, Python rechaza las peticiones de acción
-   ("reinicia el servidor", "cierra los incidentes"), de código o de manipulación de reglas. El
+   («reinicia el servidor», «cierra los incidentes»), de código o de manipulación de reglas. El
    rechazo es inmediato y no consume inferencia.
 2. **Lista blanca de cinco herramientas**, todas de solo lectura y definidas en un único registro
    (`src/herramientas.py`):
@@ -253,7 +252,7 @@ La aplicación mide su propio servicio, no el de los incidentes del CSV.
 - **Logs JSONL** en `resultados_locales/logs/app.jsonl`: una línea por evento con `ts_utc`,
   `nivel`, `evento`, `trace_id` y `atributos`.
 - **Traza por consulta.** Cada consulta tiene un `trace_id` y tres spans: selección de herramienta,
-  ejecución de herramienta e interpretación. Así se ve dónde se va el tiempo.
+  ejecución de herramienta e interpretación. Así se ve en qué paso se consume el tiempo.
 - **SLI** calculados de los eventos: latencia p50 y p95, tiempo hasta el primer token, tokens por
   segundo, tasa de error, tasa de respuestas truncadas, tasa de respaldo y proporción de cifras
   verificadas.
@@ -263,7 +262,7 @@ La aplicación mide su propio servicio, no el de los incidentes del CSV.
   un hash corto.
 
 > Las horas entre apertura y resolución del dataset son una variable histórica de otra
-> organización. **No son SLO, SLA ni MTTR** y no aparecen en la pestaña Observabilidad.
+> organización. No son SLO, SLA ni MTTR, y no aparecen en la pestaña Observabilidad.
 
 Detalle en [docs/OBSERVABILIDAD.md](docs/OBSERVABILIDAD.md).
 
@@ -296,8 +295,8 @@ demuestran, están en [docs/specs/README.md](docs/specs/README.md).
 | Síntoma | Primer paso |
 |---|---|
 | `pip install` intenta compilar pandas | El entorno se creó con Python 3.14: bórralo y vuelve a crearlo con `py -3.13 -m venv .venv` |
-| "No se pudo conectar con Ollama" | Abre Ollama desde Inicio y pulsa «Verificar Ollama» |
-| "Modelo no disponible" | `ollama pull llama3.2:3b` |
+| «No se pudo conectar con Ollama» | Abre Ollama desde Inicio y pulsa «Verificar Ollama» |
+| «Modelo no disponible» | `ollama pull llama3.2:3b` |
 | La respuesta tarda mucho | Pulsa «Verificar Ollama» para precalentar el modelo, cierra aplicaciones pesadas o usa `llama3.2:1b` |
 | El puerto 8501 está ocupado | `.\.venv\Scripts\python.exe -m streamlit run app.py --server.port 8502` |
 

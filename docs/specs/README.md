@@ -69,7 +69,7 @@ class AnalisisIncidentes                                                        
 | La duración se describe como variable histórica, no como SLO ni MTTR | `test_descripcion_de_duracion_niega_slo_sla_y_mttr` |
 | La carga por ruta no lee el contenido para la firma y rechaza archivos grandes | `test_firma_archivo_no_lee_contenido_y_cambia_con_mtime`, `test_cargar_ruta_rechaza_archivo_grande_antes_de_leer` |
 | El SHA-256 del CSV incluido coincide con el esperado | `test_sha256_csv_incluido_es_el_hash_del_taller1`, `test_integridad_del_csv_incluido_coincide` |
-| La segmentación agrupa el resto, cuenta nulos como "(sin dato)" y rechaza variables no autorizadas | `test_segmentar_top_agrupa_resto_en_otros`, `test_segmentar_nulos_como_sin_dato`, `test_segmentar_rechaza_variable_no_autorizada_y_top_invalido` |
+| La segmentación agrupa el resto, cuenta nulos como «(sin dato)» y rechaza variables no autorizadas | `test_segmentar_top_agrupa_resto_en_otros`, `test_segmentar_nulos_como_sin_dato`, `test_segmentar_rechaza_variable_no_autorizada_y_top_invalido` |
 | Spearman funciona sin SciPy | `test_spearman_funciona_sin_scipy`, `test_spearman_es_pearson_sobre_rangos_y_devuelve_none_si_no_esta_definido` |
 | Factory intercambia analizadores según el tipo | `test_factory_intercambia_analizadores` |
 | Las funciones de análisis no mutan la entrada | `test_funciones_de_analisis_no_mutan_la_entrada` |
@@ -142,7 +142,7 @@ def evaluar_slos(muestras, slos=SLOS) -> list[EvaluacionSLO]
 
 | Criterio | Prueba |
 |---|---|
-| El payload sigue el formato oficial de `/api/chat` con `tools` y nunca envía `think` | `test_chat_envia_payload_oficial_con_tools`, `test_chat_sin_herramientas_omite_tools_y_nunca_envia_think` |
+| El cuerpo de la petición sigue el formato oficial de `/api/chat` con `tools` y nunca envía `think` | `test_chat_envia_payload_oficial_con_tools`, `test_chat_sin_herramientas_omite_tools_y_nunca_envia_think` |
 | Las llamadas a herramientas se leen como objeto o como texto JSON | `test_chat_parsea_tool_calls_con_argumentos_objeto`, `test_chat_decodifica_argumentos_en_texto_json` |
 | El contexto del modelo no cambia entre peticiones (evita recargas) | `test_opciones_no_pueden_cambiar_num_ctx` |
 | Los errores de conexión, timeout, modelo ausente y memoria tienen mensajes legibles y tipo | `test_errores_http_traducidos`, `test_error_ollama_lleva_tipo_operacion_y_codigo` |

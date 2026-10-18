@@ -57,7 +57,7 @@ Como máximo hay dos llamadas al modelo por consulta.
 
 **Alternativas.** Selección manual únicamente (no demuestra uso de herramientas por el agente);
 bucle libre de herramientas con varias rondas (más lento y propenso a repetir llamadas);
-frameworks de agentes como LangChain (dependencia grande para cinco funciones).
+bibliotecas de agentes como LangChain (dependencia grande para cinco funciones).
 
 **Consecuencias.** El modelo nunca ejecuta nada que no esté en el registro, y el registro solo
 tiene lecturas. La traza deja ver si eligió el modelo o el respaldo.
@@ -112,7 +112,7 @@ claros en Seaborn); histograma lineal de la duración (aplasta la mayoría de lo
 **Contexto.** Interesa saber dónde se va el tiempo de una consulta y si el agente cumple lo que
 promete, sin montar infraestructura para una aplicación local.
 
-**Decisión.** Logger JSONL con `logging`, un `trace_id` por consulta, tres spans (selección,
+**Decisión.** Registro JSONL con `logging`, un `trace_id` por consulta, tres spans (selección,
 ejecución, interpretación), un evento final por consulta del que se derivan todos los SLI y tres
 SLO con presupuesto de error calculado por lote. Detalle en [OBSERVABILIDAD.md](OBSERVABILIDAD.md).
 

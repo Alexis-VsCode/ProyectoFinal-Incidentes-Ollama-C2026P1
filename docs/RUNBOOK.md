@@ -5,8 +5,8 @@ comandos se ejecutan en PowerShell desde la carpeta del repositorio.
 
 ## Ollama no responde
 
-**Síntoma.** El botón «Verificar Ollama» o una consulta muestran "No se pudo conectar con Ollama en
-127.0.0.1:11434". El análisis sigue disponible; solo falla el agente.
+**Síntoma.** El botón «Verificar Ollama» o una consulta muestran «No se pudo conectar con Ollama en
+127.0.0.1:11434». El análisis sigue disponible; solo falla el agente.
 
 **Diagnóstico.**
 
@@ -31,7 +31,7 @@ y «Verificar Ollama» termina en verde.
 
 ## Modelo no descargado
 
-**Síntoma.** "Modelo no disponible. Ejecute: ollama pull llama3.2:3b".
+**Síntoma.** «Modelo no disponible. Ejecute: ollama pull llama3.2:3b».
 
 **Diagnóstico.**
 
@@ -51,7 +51,7 @@ ollama pull llama3.2:1b
 
 ## Latencia alta o timeout
 
-**Síntoma.** La respuesta tarda más de un minuto, o aparece "Ollama superó N s sin responder".
+**Síntoma.** La respuesta tarda más de un minuto, o aparece «Ollama superó N s sin responder».
 
 **Diagnóstico.** En la pestaña Observabilidad, revisa el span `interpretacion` de la consulta y los
 tokens por segundo. En CPU, `llama3.2:3b` genera unos 7 tokens por segundo; la primera consulta
@@ -77,7 +77,7 @@ pocos segundos.
 
 ## Puerto 8501 ocupado
 
-**Síntoma.** Streamlit informa "Port 8501 is already in use" o abre otra aplicación.
+**Síntoma.** Streamlit informa «Port 8501 is already in use» o abre otra aplicación.
 
 **Diagnóstico.**
 

@@ -1,6 +1,6 @@
 # Procedencia del CSV
 
-- Dataset: **Incident Response Log**, Vipul Shinde, versión 2.
+- Dataset: *Incident Response Log*, Vipul Shinde, versión 2.
 - Fuente: https://www.kaggle.com/datasets/vipulshinde/incident-response-log/versions/2
 - Archivo: `incident_event_log.csv`, sin modificaciones respecto de la descarga.
 - Tamaño: 39.147.503 bytes.
@@ -15,9 +15,9 @@ UCI describe 141.712 eventos y 24.918 incidentes: no son los conteos de este CSV
 procedimiento que produjo la diferencia de tamaño, por lo que no se atribuye a ninguna limpieza
 propia.
 
-La metadata de Kaggle, conservada en `incident-response-log-metadata.json`, declara licencia CC0;
-la ficha de UCI declara CC BY 4.0. Se mantiene la atribución a ambas fuentes y no se modifica ni se
-amplía la licencia del conjunto original.
+Los metadatos de Kaggle, conservados en `incident-response-log-metadata.json`, declaran la
+licencia CC0; la ficha de UCI declara CC BY 4.0. Se mantiene la atribución a ambas fuentes y no se
+modifica ni se amplía la licencia del conjunto original.
 
 ## Cómo obtenerlo de nuevo
 

@@ -1,12 +1,12 @@
 # Observabilidad de la aplicación
 
-La aplicación aplica prácticas de SRE a sí misma: registra eventos estructurados, traza cada
+La aplicación usa prácticas de SRE sobre sí misma: registra eventos estructurados, traza cada
 consulta al agente y calcula indicadores (SLI) y objetivos (SLO) de su propio servicio.
 
 > **Regla de dominio.** Los SLI y SLO miden la aplicación y su agente: latencia de la consulta,
 > errores de Ollama y cifras verificadas. La duración entre apertura y resolución de los incidentes
-> del CSV es una variable histórica y descriptiva de otra organización. **No es SLO, ni SLA, ni
-> MTTR**, y no aparece en la pestaña Observabilidad.
+> del CSV es una variable histórica y descriptiva de otra organización. No es SLO, ni SLA, ni
+> MTTR, y no aparece en la pestaña Observabilidad.
 
 Todo se implementa con la biblioteca estándar (`logging`, `json`, `uuid`, `time`, `datetime`) en
 `src/observabilidad.py`.
@@ -18,7 +18,8 @@ Todo se implementa con la biblioteca estándar (`logging`, `json`, `uuid`, `time
 - **Comparador de modelos:** escribe en un archivo aparte,
   `resultados_locales/logs/comparacion_<fecha>.jsonl`, para que el tráfico de prueba no se mezcle
   con el uso real.
-- Sin configurar el logger no se escribe nada (handler nulo): las pruebas no ensucian la carpeta.
+- Si el logger no se configura, no se escribe nada (queda un `logging.NullHandler`): las pruebas no
+  ensucian la carpeta.
 
 ## Campos de cada línea
 
@@ -40,7 +41,7 @@ Todo se implementa con la biblioteca estándar (`logging`, `json`, `uuid`, `time
 | `respaldo_activado` | WARNING | motivo (sin llamada, herramienta no autorizada, argumentos inválidos, modelo sin herramientas, selección truncada), herramienta y origen |
 | `ejecucion_herramienta` (span) | INFO o ERROR | herramienta, argumentos, origen |
 | `interpretacion` (span) | INFO o ERROR | `done_reason`, truncada, tokens, tokens por segundo, tiempo hasta el primer token |
-| `ollama_error` | ERROR | tipo (conexión, timeout, no instalado, memoria, http, stream...), operación y código HTTP |
+| `ollama_error` | ERROR | tipo (conexión, timeout, no instalado, memoria, http, stream, entre otros), operación y código HTTP |
 | `consulta_finalizada` | INFO o WARNING | estado, segundos, primer token, tokens por segundo, origen de la selección, cifras evaluadas y verificadas, tipo de error |
 
 ## Trazas y spans
@@ -87,9 +88,9 @@ Los percentiles usan el método de rango más cercano. Si no hay eventos, el SLI
 
 Para cada SLO se calcula:
 
-- **cumplimiento** = buenos / válidos;
-- **presupuesto total** = (1 - objetivo) x válidos;
-- **presupuesto restante** = total - (válidos - buenos), que puede ser negativo;
+- **cumplimiento**: `buenos / válidos`;
+- **presupuesto total**: `(1 - objetivo) * válidos`;
+- **presupuesto restante**: `total - (válidos - buenos)`, que puede ser negativo;
 - **suficiente**: hacen falta al menos 20 eventos válidos; con menos, el resultado es indicativo.
 
 La ventana es el lote: el archivo de log (filtrable por fecha y modelo) o una corrida del
@@ -107,7 +108,7 @@ Qué hacer si se agota un presupuesto:
 
 ## Cómo leerlo
 
-En la aplicación, la pestaña **Observabilidad** muestra la salud de Ollama, la integridad del CSV,
+En la aplicación, la pestaña Observabilidad muestra la salud de Ollama, la integridad del CSV,
 la tabla de SLI frente a SLO con el presupuesto restante y las últimas consultas con su
 `trace_id`. Desde ahí se puede descargar el log.
 
@@ -131,7 +132,7 @@ HTTP y de Python.
 
 ## Privacidad
 
-El log **no guarda** el texto de las preguntas, el contexto enviado al modelo ni las respuestas.
+El log no guarda el texto de las preguntas, el contexto enviado al modelo ni las respuestas.
 Solo guarda longitudes y un hash corto de la pregunta (`pregunta_sha256_12`). La evidencia
 completa de una consulta está en el JSON que el usuario descarga desde la pestaña del agente, y
 solo si decide descargarlo.
