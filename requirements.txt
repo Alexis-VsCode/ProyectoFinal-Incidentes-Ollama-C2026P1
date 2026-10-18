@@ -1,0 +1,8 @@
+# Dependencias directas. Python 3.13 x64 (pandas 2.2.3 no publica wheel para 3.14).
+streamlit==1.66.0
+pandas==2.2.3
+numpy==2.3.5
+plotly==6.9.0
+requests==2.34.2
+matplotlib==3.10.7
+seaborn==0.13.2

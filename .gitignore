@@ -1,0 +1,28 @@
+# Entornos de Python
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Configuración local y secretos
+.env
+.streamlit/secrets.toml
+.vscode/
+.idea/
+
+# Modelos y artefactos de Ollama (no se versionan)
+*.gguf
+*.bin
+.ollama/
+
+# Resultados y registros generados al ejecutar
+resultados_locales/
+*.log
+
+# Archivos temporales del sistema y de Office
+Thumbs.db
+.DS_Store
+~$*
