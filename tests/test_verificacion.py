@@ -231,3 +231,28 @@ def test_cobertura_de_cifras_clave():
     assert cobertura_cifras(resultado, CONTEXTO, rutas) == 0.667
     assert cobertura_cifras(resultado, CONTEXTO, ["ruta.inexistente"]) is None
     assert cobertura_cifras(resultado, CONTEXTO, ["comparacion_prioridades[0].incidentes"]) == 0.0
+
+
+# Paso 7: números que forman parte de una etiqueta de segmento
+
+CONTEXTO_SEGMENTOS = {
+    "segmentacion_assignment_group": {"segmentos": [
+        {"segmento": "Group 70", "incidentes": 7369, "porcentaje_incidentes": 35.48, "mediana_horas": 0.35}]},
+    "segmentacion_category": {"segmentos": [
+        {"segmento": "Category 26", "incidentes": 26, "porcentaje_incidentes": 0.13, "mediana_horas": 1.5}]},
+}
+
+
+def test_numero_de_etiqueta_de_segmento_se_ignora_como_etiqueta():
+    texto = "Group 70 concentra 7369 incidentes; el grupo 70 y la Category 26 aparecen en el ranking."
+    assert estados(texto, CONTEXTO_SEGMENTOS) == [
+        ("70", "ignorada", "etiqueta"), ("7369", "verificada", None),
+        ("70", "ignorada", "etiqueta"), ("26", "ignorada", "etiqueta")]
+    resultado = verificar_cifras(texto, CONTEXTO_SEGMENTOS)
+    assert resultado.evaluadas == 1 and resultado.proporcion == 1.0
+
+
+def test_numero_suelto_igual_a_etiqueta_sigue_contando():
+    assert estados("Hay 26 incidentes en esa categoría.", CONTEXTO_SEGMENTOS) == [("26", "verificada", None)]
+    assert estados("El Group 71 no figura.", CONTEXTO_SEGMENTOS) == [("71", "no_verificada", None)]
+    assert estados("Group 70,5 horas", CONTEXTO_SEGMENTOS)[0][1] != "ignorada"

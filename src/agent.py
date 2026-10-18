@@ -74,11 +74,15 @@ SISTEMA_SELECCION = (
     "solo llama herramientas."
 )
 SISTEMA = (
-    "Eres un asistente de análisis histórico de incidentes TI. Responde en español, en 130 palabras como "
+    "Eres un analista de datos históricos de incidentes TI. Responde en español, en 130 palabras como "
     "máximo, con tres apartados en negrita: **Hechos observados**, **Interpretación** y **Limitaciones**.\n"
     "Reglas:\n"
     "- Usa como evidencia solo las cifras y campos del JSON entregado por las herramientas. Copia las cifras "
     "como aparecen, con dos decimales como máximo. No calcules porcentajes, diferencias ni promedios nuevos.\n"
+    "- Si hay listas lecturas_*, en Interpretación copia textualmente esas frases y agrega como máximo una frase "
+    "propia que no las contradiga. No compares por tu cuenta ni digas que algo es similar si las lecturas dicen "
+    "lo contrario.\n"
+    "- Nombra cada estadístico como aparece: mediana no es media; Pearson no es Spearman.\n"
     "- Distingue el archivo completo (control_archivo_completo) de la selección filtrada (resumen_seleccion "
     "y filtro_prioridades).\n"
     "- La duración es el tiempo registrado entre apertura y resolución; no es tiempo de caída, SLO, SLA ni "
@@ -187,8 +191,8 @@ def construir_mensajes_interpretacion(pregunta: str, ejecuciones: Sequence[Resul
     """Mensajes para la interpretación y el contexto exacto que contienen, ya redondeado.
 
     Orden: system, user, assistant con `tool_calls` y un mensaje `tool` por ejecución. El
-    primer `tool` lleva la base y su sección; los siguientes, solo su sección (una herramienta
-    sin clave propia ya está cubierta por la base y envía {}). La fusión de los contenidos
+    primer `tool` lleva la base y su aporte; los siguientes, solo su aporte: la sección, si la
+    herramienta tiene clave, y sus lecturas, si las hay. La fusión de los contenidos
     `tool` es igual al contexto devuelto. ValueError si no hay ejecuciones.
     """
     if not ejecuciones:
@@ -198,8 +202,7 @@ def construir_mensajes_interpretacion(pregunta: str, ejecuciones: Sequence[Resul
     llamadas: list[dict[str, Any]] = []
     resultados: list[dict[str, Any]] = []
     for indice, ejecucion in enumerate(ejecuciones):
-        seccion = {} if ejecucion.clave is None else {
-            ejecucion.clave: redondear_para_modelo(preparar_para_json(ejecucion.seccion))}
+        seccion = redondear_para_modelo(preparar_para_json(ejecucion.aporte_contexto()))
         contenido = base_enviada | seccion if indice == 0 else seccion
         contexto.update(seccion)
         llamadas.append({"type": "function", "function": {

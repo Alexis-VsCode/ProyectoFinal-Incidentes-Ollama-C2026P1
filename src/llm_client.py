@@ -22,7 +22,7 @@ from urllib3.exceptions import ReadTimeoutError
 
 URL_OLLAMA = "http://127.0.0.1:11434"
 HOSTS_LOCALES = frozenset({"127.0.0.1", "localhost", "[::1]"})
-MODELOS: tuple[str, ...] = ("llama3.2:3b", "llama3.2:1b", "qwen2.5:3b")
+MODELOS: tuple[str, ...] = ("llama3.2:3b", "llama3.2:1b")
 MODELO_POR_DEFECTO = "llama3.2:3b"
 KEEP_ALIVE = "10m"
 NUM_CTX = 4096

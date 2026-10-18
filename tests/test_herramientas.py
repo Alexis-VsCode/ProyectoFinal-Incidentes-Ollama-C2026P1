@@ -24,6 +24,8 @@ from src.herramientas import (
     contexto_base,
     contexto_herramienta,
     enrutar_por_palabras,
+    etiqueta_spearman,
+    formato_es,
     json_compacto,
     normalizar_texto,
     preparar_para_json,
@@ -177,7 +179,9 @@ def test_validar_argumentos_nulos_o_no_objeto():
 @pytest.mark.parametrize("prioridades", [["1 - Critical"], []], ids=["critico", "vacio"])
 def test_registro_reproduce_contexto_legado(herramienta, prioridades):
     analisis = analisis_agente(prioridades)
-    assert contexto_herramienta(analisis, herramienta) == contexto_legado(analisis, herramienta)
+    contexto = contexto_herramienta(analisis, herramienta)
+    sin_lecturas = {k: v for k, v in contexto.items() if not k.startswith("lecturas_")}
+    assert sin_lecturas == contexto_legado(analisis, herramienta)
     json.dumps(contexto_herramienta(analisis, herramienta), allow_nan=False)
 
 
@@ -352,3 +356,114 @@ def test_contexto_peor_caso_cabe_en_presupuesto(analisis_real):
         resultado = REGISTRO.ejecutar(nombre, argumentos, analisis_real)
         contexto[resultado.clave] = resultado.seccion
     assert len(json_compacto(redondear_para_modelo(preparar_para_json(contexto)))) <= 9000
+
+
+# Paso 7: lecturas deterministas que el modelo solo redacta
+
+SECCION_PRIORIDADES = [
+    {"priority": "1 - Critical", "incidentes": 220, "porcentaje_incidentes": 1.06, "duraciones_validas": 220,
+     "media_horas": 279.18, "mediana_horas": 78.17},
+    {"priority": "2 - High", "incidentes": 337, "porcentaje_incidentes": 1.62, "duraciones_validas": 337,
+     "media_horas": 170.42, "mediana_horas": 48.32},
+    {"priority": "3 - Moderate", "incidentes": 19554, "porcentaje_incidentes": 94.15, "duraciones_validas": 18226,
+     "media_horas": 182.63, "mediana_horas": 24.29},
+    {"priority": "4 - Low", "incidentes": 658, "porcentaje_incidentes": 3.17, "duraciones_validas": 568,
+     "media_horas": 324.3, "mediana_horas": 22.85},
+]
+SECCION_RELACIONES = [
+    {"variable": "sys_mod_count", "pearson_con_duracion": 0.899, "spearman_con_duracion": 0.846, "pares_validos": 19351},
+    {"variable": "reassignment_count", "pearson_con_duracion": 0.204, "spearman_con_duracion": 0.523,
+     "pares_validos": 19351},
+    {"variable": "reopen_count", "pearson_con_duracion": 0.055, "spearman_con_duracion": 0.106, "pares_validos": 19351},
+]
+
+
+def lecturas_de(nombre: str, seccion) -> list[str]:
+    return REGISTRO.obtener(nombre).lector(seccion)
+
+
+def test_formato_es_ec_usa_coma_decimal_y_punto_de_miles():
+    assert formato_es(78.17) == "78,17"
+    assert formato_es(24.6) == "24,6"
+    assert formato_es(0.5234) == "0,523"
+    assert formato_es(19554) == "19.554"
+    assert formato_es(1234.5) == "1.234,5"
+    assert formato_es(3.42, 1) == "3,4"
+
+
+def test_lecturas_prioridades_ordenan_medianas_y_niegan_similitud():
+    lecturas = lecturas_de("prioridades", SECCION_PRIORIDADES)
+    assert lecturas[0] == ("Orden de las medianas de mayor a menor: 1 - Critical (78,17 h), 2 - High (48,32 h), "
+                           "3 - Moderate (24,29 h), 4 - Low (22,85 h).")
+    assert "La mediana de 1 - Critical (78,17 h) es 3,4 veces la de 4 - Low (22,85 h)." in lecturas
+    assert "Las medianas por prioridad NO son similares." in lecturas
+    assert "1 - Critical tiene 220 incidentes frente a 19.554 de 3 - Moderate." in lecturas
+
+
+def test_lecturas_prioridades_sin_negacion_si_la_razon_no_supera_1_5():
+    seccion = [dict(SECCION_PRIORIDADES[0], mediana_horas=30.0), dict(SECCION_PRIORIDADES[2], mediana_horas=24.0)]
+    lecturas = lecturas_de("prioridades", seccion)
+    assert "La mediana de 1 - Critical (30 h) es 1,2 veces la de 3 - Moderate (24 h)." in lecturas
+    assert not any("NO son similares" in lectura for lectura in lecturas)
+
+
+def test_lecturas_prioridades_toleran_seccion_vacia_o_medianas_nulas():
+    assert lecturas_de("prioridades", []) == []
+    lecturas = lecturas_de("prioridades", [dict(SECCION_PRIORIDADES[0], mediana_horas=None)])
+    assert not any("veces" in lectura for lectura in lecturas)
+
+
+@pytest.mark.parametrize("rho, etiqueta", [
+    (0.0, "despreciable"), (0.099, "despreciable"), (0.1, "débil"), (-0.299, "débil"), (0.3, "moderada"),
+    (0.499, "moderada"), (0.5, "moderada a fuerte"), (-0.846, "moderada a fuerte"),
+])
+def test_etiqueta_spearman_por_umbral_de_valor_absoluto(rho, etiqueta):
+    assert etiqueta_spearman(rho) == etiqueta
+
+
+def test_lecturas_relaciones_etiquetan_por_spearman_y_niegan_causa():
+    lecturas = lecturas_de("relaciones", SECCION_RELACIONES)
+    assert ("reassignment_count: Pearson 0,204 y Spearman 0,523; relación moderada a fuerte según Spearman."
+            in lecturas)
+    assert "reopen_count: Pearson 0,055 y Spearman 0,106; relación débil según Spearman." in lecturas
+    assert any("Spearman es la medida adecuada" in lectura and "asimetría" in lectura for lectura in lecturas)
+    assert any("no implica causa" in lectura for lectura in lecturas)
+
+
+def test_lecturas_resumen_media_supera_mediana_con_cola_larga():
+    lecturas = lecturas_de("resumen", {"incidentes_seleccionados": 20769, "media_horas": 187.678,
+                                       "mediana_horas": 24.6, "p90_horas": 397.37})
+    assert lecturas == ["La media (187,68 h) supera a la mediana (24,6 h); la distribución tiene cola larga a "
+                        "la derecha."]
+    assert lecturas_de("resumen", {"media_horas": None, "mediana_horas": None}) == []
+
+
+def test_lecturas_segmentar_mayor_segmento_y_mediana_mas_alta(analisis):
+    seccion = REGISTRO.ejecutar("segmentar", {"variable": "assignment_group", "top": 3}, analisis).seccion
+    lecturas = lecturas_de("segmentar", seccion)
+    mayor = seccion["segmentos"][0]
+    assert lecturas[0] == (f"El segmento con más incidentes es {mayor['segmento']}: {mayor['incidentes']} "
+                           f"incidentes ({formato_es(mayor['porcentaje_incidentes'])} %).")
+    con_mediana = [s for s in seccion["segmentos"] if s["mediana_horas"] is not None]
+    alta = max(con_mediana, key=lambda s: s["mediana_horas"])
+    assert lecturas[1] == (f"Entre los mostrados, la mediana más alta es la de {alta['segmento']} "
+                           f"({formato_es(alta['mediana_horas'])} h).")
+
+
+def test_lecturas_calidad_columna_con_mas_nulos():
+    seccion = [{"variable": "priority", "tipo": "object", "nulos": 0, "porcentaje_nulos": 0.0, "valores_unicos": 4},
+               {"variable": "resolved_at", "tipo": "datetime64[ns]", "nulos": 2157, "porcentaje_nulos": 10.386,
+                "valores_unicos": 18000}]
+    assert lecturas_de("calidad", seccion) == ["La columna con más nulos es resolved_at: 2.157 nulos (10,39 %)."]
+    assert lecturas_de("calidad", [seccion[0]]) == ["Ninguna columna tiene nulos."]
+
+
+@pytest.mark.parametrize("herramienta", ["resumen", "prioridades", "calidad", "relaciones"])
+@pytest.mark.parametrize("prioridades", [["1 - Critical"], []], ids=["critico", "vacio"])
+def test_contexto_herramienta_incluye_lecturas_serializables(herramienta, prioridades):
+    contexto = contexto_herramienta(analisis_agente(prioridades), herramienta)
+    lecturas = contexto.get(f"lecturas_{herramienta}", [])
+    assert all(isinstance(lectura, str) for lectura in lecturas)
+    if prioridades and herramienta != "relaciones":
+        assert lecturas
+    json.dumps(contexto, allow_nan=False)

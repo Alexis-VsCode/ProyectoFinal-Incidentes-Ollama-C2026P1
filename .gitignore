@@ -26,3 +26,10 @@ resultados_locales/
 Thumbs.db
 .DS_Store
 ~$*
+
+# Video, informe y entregables academicos: viven fuera del repositorio
+*.mp4
+*.webm
+*.mov
+*.docx
+*.pdf

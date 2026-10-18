@@ -316,7 +316,7 @@ def test_mensajes_de_interpretacion_formato_tool(analisis):
     assert [m["tool_name"] for m in mensajes[3:]] == ["prioridades", "segmentar"]
     primero, segundo = (json.loads(m["content"]) for m in mensajes[3:])
     assert set(contexto_base(analisis)) < set(primero) and "comparacion_prioridades" in primero
-    assert list(segundo) == ["segmentacion_category"]
+    assert list(segundo) == ["segmentacion_category", "lecturas_segmentar"]
 
 
 def test_interpretacion_sin_tools_y_num_ctx_constante(analisis):
@@ -355,7 +355,7 @@ def test_construir_mensajes_con_resumen_en_segundo_lugar(analisis):
     ejecuciones = [REGISTRO.ejecutar("calidad", {}, analisis), REGISTRO.ejecutar("resumen", {}, analisis)]
     mensajes, contexto = construir_mensajes_interpretacion("Pregunta", ejecuciones, contexto_base(analisis))
     assert [m["role"] for m in mensajes] == ["system", "user", "assistant", "tool", "tool"]
-    assert json.loads(mensajes[4]["content"]) == {}
+    assert list(json.loads(mensajes[4]["content"])) == ["lecturas_resumen"]
     assert "calidad_incidentes_seleccionados" in contexto and "resumen_seleccion" in contexto
 
 
@@ -636,3 +636,20 @@ def test_rechazo_queda_en_la_traza_con_nivel_warning(analisis):
     assert rechazo[0]["atributos"] == {"categoria": "accion", "coincidencia": "reinicia"}
     assert registro.a_muestra().estado == "rechazada"
     assert registro.digest is None
+
+
+def test_sistema_basa_la_interpretacion_en_lecturas_y_nombres_exactos():
+    from src.agent import SISTEMA
+    assert "lecturas" in SISTEMA
+    assert "analista" in SISTEMA and "asistente" not in SISTEMA
+    assert "similar" in SISTEMA
+    for nombre in ("mediana", "media", "Pearson", "Spearman"):
+        assert nombre in SISTEMA
+    assert len(SISTEMA) <= 1600
+
+
+def test_sistema_pide_copiar_las_lecturas_en_la_interpretacion():
+    from src.agent import SISTEMA
+    assert "copia textualmente" in SISTEMA
+    assert "como máximo una frase propia" in SISTEMA
+    assert len(SISTEMA) <= 1600

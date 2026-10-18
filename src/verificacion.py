@@ -4,7 +4,7 @@ Son funciones puras. Se extraen las cifras del texto (formatos español e inglé
 ambigüedad miles/decimal resuelta en dos candidatos), se comparan con los números del
 contexto tal como se envió al modelo, exigiendo redondeo correcto, y se clasifican en
 verificadas, no verificadas o ignoradas (años, enteros pequeños, números citados en la
-pregunta y formatos irregulares). Las unidades admitidas son "%" (valor o fracción) y
+pregunta, números de una etiqueta de segmento y formatos irregulares). Las unidades admitidas son "%" (valor o fracción) y
 "h"/"horas" (sin conversión); no se convierten días, minutos ni multiplicadores.
 
 Límite declarado: se comprueba que la cifra está en la evidencia, no que se atribuya al
@@ -17,14 +17,19 @@ from __future__ import annotations
 import math
 import numbers
 import re
+import unicodedata
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
 
 EstadoCifra = Literal["verificada", "no_verificada", "ignorada"]
-MotivoIgnorada = Literal["anio", "entero_pequeno", "en_pregunta", "formato"]
+MotivoIgnorada = Literal["anio", "entero_pequeno", "en_pregunta", "formato", "etiqueta"]
 CLAVES_EXCLUIDAS = ("sha256", "digest")
 DECIMALES_PROPORCION = 3
+EQUIVALENCIAS_ETIQUETA = {"grupo": "group", "categoria": "category", "subcategoria": "subcategory"}
+
+_ETIQUETA_CONTEXTO = re.compile(r"\s*([^\W\d_]+) (\d+)\s*")
+_PALABRA_PREVIA = re.compile(r"([^\W\d_]+) $")
 
 _MASCARAS = (
     re.compile(r"\d{4}-\d{2}(?:-\d{2})?(?:[ T]\d{2}:\d{2}(?::\d{2})?)?"),
@@ -213,6 +218,45 @@ def numeros_de_contexto(contexto: Any) -> list[float]:
     return list(vistos)
 
 
+def _normalizar_palabra(palabra: str) -> str:
+    """Palabra sin tildes, en minúsculas y con su equivalente en inglés si lo tiene ("grupo" pasa a "group")."""
+    sin_tildes = "".join(c for c in unicodedata.normalize("NFKD", palabra) if not unicodedata.combining(c)).lower()
+    return EQUIVALENCIAS_ETIQUETA.get(sin_tildes, sin_tildes)
+
+
+def etiquetas_de_contexto(contexto: Any) -> frozenset[tuple[str, int]]:
+    """Pares (palabra normalizada, entero) de los textos del contexto que son una etiqueta completa.
+
+    Solo cuenta un valor de texto que entero es "Palabra N", como "Group 70" o "Category 26";
+    las frases largas no aportan etiquetas. Se excluye lo que cuelga de claves con "sha256" o "digest".
+    """
+    pares: set[tuple[str, int]] = set()
+
+    def recorrer(valor: Any) -> None:
+        if isinstance(valor, str):
+            encontrada = _ETIQUETA_CONTEXTO.fullmatch(valor)
+            if encontrada:
+                pares.add((_normalizar_palabra(encontrada.group(1)), int(encontrada.group(2))))
+        elif isinstance(valor, dict):
+            for clave, subvalor in valor.items():
+                if not _clave_excluida(str(clave)):
+                    recorrer(subvalor)
+        elif isinstance(valor, (list, tuple, set, frozenset)):
+            for subvalor in valor:
+                recorrer(subvalor)
+
+    recorrer(contexto)
+    return frozenset(pares)
+
+
+def _es_etiqueta(texto: str, cifra: CifraExtraida, etiquetas: frozenset[tuple[str, int]]) -> bool:
+    """True si la cifra es un entero sin signo ni unidad pegado, tras un espacio, a la palabra de una etiqueta."""
+    if not etiquetas or cifra.unidad is not None or cifra.decimales != (0,) or cifra.texto[:1] in "-−":
+        return False
+    previa = _PALABRA_PREVIA.search(texto, 0, cifra.posicion)
+    return previa is not None and (_normalizar_palabra(previa.group(1)), int(cifra.candidatos[0])) in etiquetas
+
+
 def _coincide(valor: float, decimales: int, objetivo: float) -> float | None:
     """Distancia si `valor` es el redondeo correcto de `objetivo` con esos decimales; si no, None."""
     distancia = abs(valor - objetivo)
@@ -221,9 +265,11 @@ def _coincide(valor: float, decimales: int, objetivo: float) -> float | None:
 
 
 def _clasificar(cifra: CifraExtraida, referencias: Sequence[float],
-                de_pregunta: Sequence[float]) -> CifraVerificada:
+                de_pregunta: Sequence[float], es_etiqueta: bool = False) -> CifraVerificada:
     if not cifra.candidatos:
         return CifraVerificada(cifra, "ignorada", None, "formato")
+    if es_etiqueta:
+        return CifraVerificada(cifra, "ignorada", None, "etiqueta")
     # Paso 3: coincidencia con alguna referencia, con la unidad aplicada a la referencia
     mejor: float | None = None
     menor = math.inf
@@ -249,10 +295,16 @@ def _clasificar(cifra: CifraExtraida, referencias: Sequence[float],
 
 
 def verificar_cifras(texto: str, contexto: Any, pregunta: str = "") -> VerificacionCifras:
-    """Clasifica cada cifra de `texto` contra los números del `contexto` enviado al modelo."""
+    """Clasifica cada cifra de `texto` contra los números del `contexto` enviado al modelo.
+
+    El número que forma parte de una etiqueta de segmento del contexto ("Group 70") se ignora
+    con motivo "etiqueta" y no entra en la proporción.
+    """
     referencias = numeros_de_contexto(contexto)
+    etiquetas = etiquetas_de_contexto(contexto)
     de_pregunta = [c for cifra in extraer_cifras(pregunta) for c in cifra.candidatos]
-    return VerificacionCifras(tuple(_clasificar(c, referencias, de_pregunta) for c in extraer_cifras(texto)))
+    return VerificacionCifras(tuple(_clasificar(c, referencias, de_pregunta, _es_etiqueta(texto, c, etiquetas))
+                                    for c in extraer_cifras(texto)))
 
 
 def resolver_ruta(contexto: Any, ruta: str) -> Any:

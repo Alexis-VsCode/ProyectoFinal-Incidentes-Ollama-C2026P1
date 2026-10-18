@@ -54,7 +54,7 @@ def entrada_tags(nombre: str = "llama3.2:3b") -> dict:
 
 
 def test_constantes_publicas_del_cliente():
-    assert MODELOS == ("llama3.2:3b", "llama3.2:1b", "qwen2.5:3b")
+    assert MODELOS == ("llama3.2:3b", "llama3.2:1b")
     assert MODELO_POR_DEFECTO == "llama3.2:3b"
     assert KEEP_ALIVE == "10m"
     assert NUM_CTX == 4096
@@ -339,7 +339,9 @@ def test_error_ollama_legado_sin_atributos():
 def test_modelo_fuera_de_lista_blanca_rechazado():
     with pytest.raises(ValueError):
         ClienteOllama("mistral", sesion=SesionFalsa())
-    assert ClienteOllama("qwen2.5:3b", sesion=SesionFalsa()).modelo == "qwen2.5:3b"
+    with pytest.raises(ValueError):
+        ClienteOllama("qwen2.5:3b", sesion=SesionFalsa())
+    assert ClienteOllama("llama3.2:1b", sesion=SesionFalsa()).modelo == "llama3.2:1b"
 
 
 def test_lista_blanca_configurable():
