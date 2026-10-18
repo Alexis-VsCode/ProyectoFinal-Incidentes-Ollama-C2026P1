@@ -1,186 +1,317 @@
 # Análisis de incidentes TI con un agente local
 
-Proyecto final de Kevin Alexis Barrera Llerena, Universidad Casa Grande, C2026P1.
-Aplicación local en Python y Streamlit con un agente que consulta cálculos autorizados y solicita explicaciones a Ollama.
+Proyecto Final Integrador de *Paradigmas de Programación para Inteligencia Artificial y Análisis de
+Datos* (Universidad Casa Grande, Maestría en Inteligencia Artificial y Ciencia de Datos, C2026 P1).
 
-## Qué problema resuelve
+Aplicación modular en Python y Streamlit que analiza un historial público de incidentes de TI y
+consulta a un agente que se ejecuta en el propio equipo con Ollama. Python calcula todas las cifras;
+el modelo elige entre herramientas de lectura autorizadas y redacta la interpretación.
 
-Permite examinar prioridades, calidad y duración registrada de incidentes históricos. La unidad analítica es un incidente único, obtenido a partir de su última actualización. El modelo explica resultados previamente calculados; las estadísticas se obtienen con pandas.
+## Qué problema resuelve y para quién
 
-La relación profesional es la gestión de incidentes en SRE. Los datos son públicos de otra organización: no describen a TEUNO ni al ISSPOL. No contienen logs de aplicaciones, métricas de CPU ni evidencia de despliegues. La investigación de causas y la automatización de remediaciones quedan fuera de esta implementación.
+Un registro de incidentes guarda muchas actualizaciones por caso. Si cada fila se cuenta como un
+incidente, las frecuencias y los promedios salen mal. La aplicación consolida los eventos en una
+observación por incidente y permite revisar el volumen, la calidad de los datos y la duración
+registrada por prioridad, categoría y grupo de asignación.
 
-## Empieza por aquí
+Está pensada para analistas y responsables de soporte que quieren explorar ese historial y pedir
+una explicación en lenguaje natural sin perder la trazabilidad de los números. El agente no ejecuta
+acciones ni comandos: solo consulta cálculos ya hechos.
 
-Lee `docs/01_PLAN_Y_DECISIONES.md` y después `docs/02_GUIA_POR_FASES.md`.
+El alcance es descriptivo. Los datos son públicos y anonimizados, de otra organización. No hay
+modelo predictivo ni análisis de causa raíz.
 
-Antes de instalar, abre PowerShell en VS Code y ejecuta:
+## Dataset
 
-```powershell
-py --version
-ollama --version
-git --version
-```
+| Campo | Valor |
+|---|---|
+| Nombre | Incident Response Log, versión 2 (Vipul Shinde, Kaggle) |
+| Enlace | https://www.kaggle.com/datasets/vipulshinde/incident-response-log/versions/2 |
+| Fuente original | Amaral, C., Fantinato, M. y Peres, S. (2018). *Incident management process enriched event log*. UCI Machine Learning Repository. https://doi.org/10.24432/C57S4H |
+| Licencias | La metadata de Kaggle declara CC0; la ficha de UCI declara CC BY 4.0. Se cita a ambas fuentes |
+| Archivo | `data/incident_event_log.csv`, 39.147.503 bytes |
+| SHA-256 | `5d77ea4853e443cf8447fca0f3089b7689e5469225cb68f72b2b9feea5f2d0d2` |
+| Contenido | 119.998 eventos, 36 columnas, 20.769 incidentes únicos |
 
-Que un comando no exista solamente indica que falta instalarlo o incorporarlo a PATH. El diagnóstico ampliado está en `scripts/diagnostico_windows.ps1`; es de solo lectura. Si Windows bloquea scripts, copia sus instrucciones a la terminal por partes, sin cambiar políticas del equipo.
+**Evento no es incidente.** Cada fila del CSV es una actualización de un incidente (cambio de estado,
+reasignación, modificación). El identificador `number` agrupa todas las filas de un mismo caso. La
+aplicación conserva los eventos y construye una tabla analítica con la última actualización de cada
+incidente: de 119.998 eventos salen 20.769 incidentes. Todas las cifras de la interfaz y del agente
+se calculan sobre esa tabla.
+
+Los valores `?` se tratan como desconocidos y no se imputan. La duración se deriva como
+`resolved_at - opened_at` en horas; 1.418 incidentes no tienen duración válida y quedan fuera de las
+medidas de horas, pero sí cuentan como incidentes.
+
+El CSV se versiona byte a byte (`.gitattributes` con `-text`) para que su SHA-256 no cambie al
+clonar en Windows. La procedencia completa está en [data/README.md](data/README.md).
 
 ## Requisitos
 
-- Windows 11 de 64 bits. Equipo objetivo: Core i9 de 13.ª generación y 16 GB de RAM.
-- Python 3.13 x64 para una instalación nueva. Python 3.12 x64 es una alternativa compatible si ya está instalado. La validación inicial se realizó con Python 3.12.14 en Linux; Windows debe verificarse localmente.
-- VS Code con las extensiones Python y Pylance de Microsoft.
-- Ollama para Windows y el modelo `llama3.2:3b`. Alternativa si falta memoria o la respuesta es muy lenta: `llama3.2:1b`.
-- Git para mantener el historial y publicar posteriormente el repositorio.
-- Navegador y conexión a Internet para instalar y descargar el modelo. Con los paquetes, CSV y modelo disponibles, el flujo de la app usa recursos locales.
-- Reservar aproximadamente 10–15 GB libres para instaladores, entorno y modelo es una recomendación práctica, no una medición de uso en este PC. Ollama documenta al menos 4 GB para sus binarios, más el espacio del modelo.
+- Windows 11 de 64 bits (hay una variante breve para macOS o Linux más abajo).
+- Python 3.13 x64. Se probó con Python 3.13.3.
+- Ollama para Windows y el modelo `llama3.2:3b` (unos 2 GB). Alternativa más liviana:
+  `llama3.2:1b`.
+- 16 GB de RAM recomendados. Con CPU y sin GPU, `llama3.2:3b` genera unos 7 tokens por segundo,
+  así que una respuesta completa tarda varias decenas de segundos.
+- Git para clonar el repositorio.
 
-Fuentes de instalación:
+Equipo de referencia: Intel Core i9-13900, 16 GB de RAM, sin GPU dedicada, Windows 11, Ollama
+0.40.6.
 
-- Python: https://www.python.org/downloads/windows/
-- Extensiones Python: https://code.visualstudio.com/docs/python/python-tutorial
-- Ollama: https://ollama.com/download/windows
-- Git: https://git-scm.com/downloads/win
+## Instalación en Windows (PowerShell)
 
-## Instalación en Windows paso a paso
+### 1. Clonar el repositorio
 
-Extrae el ZIP en una carpeta de trabajo, por ejemplo `C:\Proyectos\ProyectoFinal_Incidentes_Alexis_Barrera`, y abre esa carpeta desde VS Code. No ejecutes los comandos dentro del ZIP ni dentro de la carpeta superior equivocada. La carpeta abierta debe contener `app.py` y `requirements.txt`.
+```powershell
+git clone https://github.com/Alexis-VsCode/ProyectoFinal-Incidentes-Ollama-C2026P1.git
+cd ProyectoFinal-Incidentes-Ollama-C2026P1
+```
 
-### 1 Crear un entorno aislado
+### 2. Crear el entorno virtual con Python 3.13
 
 ```powershell
 py -3.13 -m venv .venv
 ```
 
-Si ya tienes Python 3.12, usa `py -3.12 -m venv .venv`. No es necesario instalar ambos.
+> **Importante:** usa `py -3.13` y no `py` a secas. Si tienes Python 3.14 instalado, `py` lo elige
+> por defecto, y `pandas==2.2.3` no publica paquetes para 3.14: la instalación intentaría compilar
+> pandas y fallaría. Comprueba la versión con `.\.venv\Scripts\python.exe --version`.
 
-En VS Code, `Ctrl+Shift+P` → `Python: Select Interpreter` → `.venv\Scripts\python.exe`.
+Los comandos siguientes llaman directamente al intérprete del entorno, así que no hace falta
+activarlo (y funcionan aunque PowerShell bloquee `Activate.ps1`). Si prefieres activarlo:
+`.\.venv\Scripts\Activate.ps1`.
 
-Puedes activar el entorno con `.\.venv\Scripts\Activate.ps1`. Los siguientes comandos utilizan directamente el intérprete del entorno y funcionan sin activación, incluso si PowerShell bloquea ese script.
-
-### 2 Instalar dependencias
+### 3. Instalar las dependencias
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m pip check
 ```
 
-Las dependencias directas están fijadas en `requirements.txt`. Las dependencias transitivas las resuelve pip; después de validar el equipo, guarda un registro del entorno:
+Las dependencias directas están fijadas en `requirements.txt` (Streamlit, pandas, NumPy, Plotly,
+requests, Matplotlib y seaborn). No se usa SciPy: la correlación de Spearman se calcula por rangos.
 
-```powershell
-New-Item -ItemType Directory -Force resultados_locales
-.\.venv\Scripts\python.exe -m pip freeze | Out-File -Encoding utf8 resultados_locales\entorno_windows.txt
-```
+### 4. Instalar Ollama y descargar el modelo
 
-### 3 Validar los datos y las reglas
-
-```powershell
-.\.venv\Scripts\python.exe -m unittest discover -s tests -v
-.\.venv\Scripts\python.exe -m scripts.validar_datos
-```
-
-Se esperan 119.998 eventos, 36 columnas originales, 20.769 incidentes y 1.418 incidentes sin duración. El resumen y las versiones del equipo se guardan en `resultados_locales/validacion_datos.json`.
-
-Comprobación adicional reproducible de la UI, sin navegador ni inferencia:
-
-```powershell
-.\.venv\Scripts\python.exe -m scripts.validar_interfaz
-```
-
-### 4 Preparar Ollama
-
-Instala Ollama desde el enlace oficial, ábrelo desde Inicio y abre una terminal nueva de VS Code para que reconozca el comando.
+1. Descarga e instala Ollama desde https://ollama.com/download.
+2. Ábrelo desde el menú Inicio (queda escuchando en `http://127.0.0.1:11434`).
+3. Abre una terminal nueva y descarga el modelo:
 
 ```powershell
 ollama --version
 ollama pull llama3.2:3b
 ollama list
-Invoke-RestMethod -Uri http://127.0.0.1:11434/api/tags
 ```
 
-Si necesitas el modelo pequeño:
+Modelo alternativo para equipos con menos memoria:
 
 ```powershell
 ollama pull llama3.2:1b
 ```
 
-Descargar un modelo no modifica Python. Ollama es un programa aparte que atiende en el puerto local 11434. La app permite elegir cuál de los dos modelos consultar. Si Ollama ya está funcionando en segundo plano no inicies otra instancia con `ollama serve`; ese comando solo sirve para arrancarlo manualmente cuando no hay servidor.
+Si Ollama ya está corriendo en segundo plano no ejecutes `ollama serve`: ese comando solo sirve
+para arrancar el servidor a mano cuando no está activo. Los modelos se guardan fuera del
+repositorio y nunca se versionan.
 
-### 5 Ejecutar Streamlit
+### 5. Ejecutar la aplicación
 
 ```powershell
 .\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
-Abre http://127.0.0.1:8501. Para detener: `Ctrl+C` en la terminal. En siguientes sesiones puedes usar `iniciar.bat` después de completar la instalación.
+Abre http://127.0.0.1:8501. Para detenerla, `Ctrl+C` en la terminal.
+
+La primera vez, Streamlit puede pedir un correo electrónico en la terminal ("Email:"). No es
+obligatorio: basta con presionar Enter.
+
+En las siguientes sesiones puedes hacer doble clic en `iniciar.bat`, que arranca la aplicación con
+el intérprete del entorno.
 
 ### macOS o Linux
 
 ```bash
-python3 -m venv .venv
+python3.13 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-python -m unittest discover -s tests -v
+ollama pull llama3.2:3b
 python -m streamlit run app.py
 ```
 
-Instala Ollama siguiendo su documentación para tu sistema y descarga el mismo modelo.
+Instala Ollama siguiendo https://ollama.com/download para tu sistema.
 
-## Uso y ejemplos
-
-1. Abre Resumen con el CSV incluido. Observa que eventos e incidentes son cifras distintas.
-2. Selecciona solamente `1 - Critical`. Deben aparecer 220 incidentes y una mediana de 78,17 horas.
-3. En Explorar cambia entre `reassignment_count` y `priority`: se utiliza el mismo contrato, con estadísticas o frecuencias según el tipo.
-4. En Agente local pulsa Verificar Ollama. Selecciona Comparar prioridades y pregunta: «¿Qué diferencias observas entre prioridades y qué limitaciones tienen estas comparaciones?».
-5. Contrasta la respuesta con el JSON de evidencia. Descarga la consulta para documentar la revisión.
-
-El modelo puede equivocarse aunque reciba evidencia. No se declara una validación automática de sus afirmaciones. Si el servicio falla, se muestra el error y el análisis sigue disponible; no se simula una respuesta de IA.
-
-## Arquitectura
-
-```mermaid
-flowchart TD
-    U[Usuario] --> UI[Streamlit app.py]
-    CSV[CSV histórico] --> D[data_loader.py]
-    UI --> D
-    D --> E[eda.py y analizadores]
-    E --> V[visualizations.py]
-    V --> UI
-    UI --> A[agent.py]
-    A --> E
-    A --> C[llm_client.py]
-    C --> O[Ollama local]
-    O --> C
-    C --> A
-    A --> UI
-```
-
-`src/data_loader.py` carga y consolida; `src/eda.py` contiene funciones, Strategy, Factory y Facade; `src/visualizations.py` produce Plotly; `src/agent.py` coordina una lista cerrada de herramientas; `src/llm_client.py` realiza HTTP local. `app.py` contiene componentes y estado de la interfaz.
-
-El patrón Strategy cambia el analizador numérico o categórico, Factory decide cuál crear y Facade ofrece las operaciones del caso a la interfaz y al agente. No se necesita un framework de agentes para este alcance.
-
-## Datos y licencia
-
-El CSV exacto de los talleres anteriores se incluye en `data/`. Consulta `data/README.md` para la atribución, licencia, hash y diferencias con el conjunto original de UCI.
-
-## Validación y límites
-
-- La suite verifica la consolidación, nulos, orden día/mes, filtros, Strategy/Factory, contrato del agente y fallos de conexión. Sus dobles de prueba no son evidencia de inferencia real.
-- La UI se comprobó con Streamlit AppTest en Linux. No sustituye la ejecución en Windows ni la revisión visual del navegador del estudiante.
-- La conexión real con el modelo, su digest, latencia y calidad de respuesta deben registrarse en el equipo del estudiante.
-- Los contadores finales y las horas se usan para descripción retrospectiva. No hay modelo predictivo ni evaluación de causa raíz.
-- Un registro tiene resolución posterior a la última actualización. Se conserva y se informa como anomalía del dato histórico.
-- Las fechas no incluyen zona horaria: la duración es una diferencia entre marcas del mismo archivo, sin inferir zona ni horario laboral.
-
-## Repositorio y entrega académica
-
-La guía actual exige un PDF de máximo 15 páginas en APA 7, Anexo A con capturas reales, Anexo B con GitHub accesible y Anexo C con YouTube público o no listado, máximo cinco minutos. El despliegue obligatorio es local.
-
-Tras comprender y verificar el proyecto, crea un repositorio en GitHub desde tu cuenta y sigue el procedimiento de `docs/02_GUIA_POR_FASES.md`. No subas `.venv`, modelos ni resultados locales. La publicación queda pendiente; no hay una URL de repositorio o video inventada en este paquete.
-
-Commit sugerido después de validar:
+## Estructura del proyecto
 
 ```text
-feat: integrar análisis modular de incidentes y agente local con Ollama
+ProyectoFinal-Incidentes-Ollama-C2026P1/
+    app.py                    interfaz Streamlit: solo compone pestañas y estado
+    iniciar.bat               arranque rápido en Windows
+    requirements.txt          dependencias de ejecución (fijadas)
+    requirements-dev.txt      dependencias de pruebas (pytest)
+    pytest.ini                configuración y marcadores de pruebas
+    .gitignore  .gitattributes  LICENSE
+    data/
+        incident_event_log.csv            dataset (SHA-256 verificado)
+        incident-response-log-metadata.json
+        README.md                         procedencia y licencia
+    assets/
+        arquitectura.png  arquitectura.svg
+    src/
+        diccionario.py        diccionario de variables en español
+        data_loader.py        carga, validación, consolidación y SHA-256
+        eda.py                Strategy, Factory, Facade, segmentación y Spearman
+        visualizations.py     gráficos Plotly y figuras Seaborn
+        llm_client.py         adaptador HTTP de Ollama
+        herramientas.py       registro único de herramientas autorizadas
+        agent.py              orquestación del agente
+        verificacion.py       verificación de cifras de la respuesta
+        observabilidad.py     logs JSONL, trazas, SLI y SLO
+        preguntas_demo.py     preguntas de demostración
+    scripts/
+        validar_datos.py      comprobación de conteos del CSV
+        validar_interfaz.py   recorrido de la interfaz sin navegador
+        comparar_modelos.py   comparación medida entre modelos
+        diagnostico_windows.ps1
+    tests/                    pruebas pytest
+    docs/
+        DECISIONES.md  OBSERVABILIDAD.md  RUNBOOK.md
+        specs/README.md       especificaciones por paquete
 ```
 
-Para revertir una prueba local, detén Streamlit. Si necesitas reconstruir dependencias, elimina únicamente la carpeta `.venv` de este proyecto y vuelve a crearla. Conserva el CSV original y el código versionado.
+`resultados_locales/` se crea al ejecutar (logs, evidencias, comparaciones) y está excluida de Git.
+
+## Pestañas de la aplicación
+
+| Pestaña | Qué muestra |
+|---|---|
+| Datos | Control del archivo (eventos, columnas, incidentes, SHA-256), reglas de preparación, diccionario de variables con nulos y descarga de la selección |
+| Resumen | Media, mediana y percentil 90 de horas; incidentes por prioridad; ECDF de la duración en escala logarítmica |
+| Explorar | Cualquier variable con el analizador que elige `AnalizadorFactory` (numérico o categórico) y su gráfico |
+| Relaciones y segmentos | Boxplot de horas por prioridad y mapa de calor de Spearman (Seaborn); segmentos por categoría o grupo de asignación |
+| Agente local | Verificar Ollama, modo automático o manual, preguntas sugeridas, respuesta en streaming, traza de herramientas e insignia de cifras verificadas |
+| Observabilidad | Salud de Ollama, integridad del CSV, SLI frente a SLO y últimas consultas con su `trace_id` |
+| Arquitectura | Diagrama, patrones y paradigmas con su justificación |
+
+La barra lateral elige la fuente de datos (CSV incluido o uno cargado con el mismo esquema), el
+modelo y el filtro de prioridades. Todas las pestañas usan la misma selección.
+
+## Cómo funciona el agente
+
+La regla es simple: **Python calcula y el modelo interpreta.** El modelo nunca recibe el CSV y
+nunca calcula una cifra.
+
+1. **Guarda previa.** Antes de llamar al modelo, Python rechaza las peticiones de acción
+   ("reinicia el servidor", "cierra los incidentes"), de código o de manipulación de reglas. El
+   rechazo es inmediato y no consume inferencia.
+2. **Lista blanca de cinco herramientas**, todas de solo lectura y definidas en un único registro
+   (`src/herramientas.py`):
+
+   | Herramienta | Qué entrega |
+   |---|---|
+   | `resumen` | Totales de la selección: incidentes, duraciones válidas, media, mediana y p90 de horas |
+   | `prioridades` | Incidentes y horas por prioridad |
+   | `calidad` | Nulos, porcentaje de nulos y valores únicos por columna |
+   | `relaciones` | Correlaciones de Pearson y Spearman de reasignaciones y reaperturas con las horas |
+   | `segmentar` | Ranking de categorías o grupos de asignación (`variable` y `top` de 3 a 10) |
+
+3. **Tool calling.** En modo automático el modelo recibe los esquemas de esas herramientas y
+   responde con el nombre y los argumentos que quiere usar. Python valida el nombre, los valores
+   permitidos y los rangos antes de ejecutar nada.
+4. **Respaldo determinista.** Si el modelo no propone una llamada válida (herramienta inexistente,
+   argumento fuera de rango o solo texto), un enrutador por palabras clave elige la herramienta. La
+   traza registra el origen de cada selección (`modelo`, `respaldo_reglas`, `usuario`).
+5. **Modo manual.** El usuario elige las herramientas y el modelo solo redacta.
+6. **Interpretación en streaming.** Con la evidencia calculada, el modelo responde en español con
+   Hechos observados, Interpretación y Limitaciones, sin herramientas disponibles en ese paso.
+7. **Verificación de cifras.** `verificar_cifras` extrae los números de la respuesta y comprueba
+   que existan en la evidencia enviada. La interfaz muestra cuántas cifras se verificaron. Comprueba
+   presencia, no atribución: la revisión humana sigue siendo necesaria.
+
+Cada consulta se puede descargar como JSON con la pregunta, las herramientas, el contexto enviado,
+el modelo y su digest, las métricas de Ollama, la verificación y la traza.
+
+## Patrones y paradigmas
+
+| Pieza | Símbolo | Problema real que resuelve |
+|---|---|---|
+| Strategy | `AnalizadorVariable`, `AnalizadorNumerico`, `AnalizadorCategorico` | Las variables numéricas y categóricas se resumen distinto, sin `if` por tipo en la interfaz |
+| Factory | `AnalizadorFactory.crear(serie)` | Concentra en un solo punto la decisión de qué estrategia usar |
+| Facade | `AnalisisIncidentes` | La interfaz y el agente acceden al análisis por una sola puerta, sin conocer pandas |
+| Adapter | `ClienteOllama` y el protocolo `ClienteChat` | Aísla HTTP y errores de Ollama; el agente depende de un contrato y se prueba con un doble |
+| Registro (lista blanca) | `RegistroHerramientas` y `REGISTRO` | El modelo solo puede pedir lo que está ahí; fuente única para el agente y la interfaz |
+| Funcional | `segmentar`, `spearman`, `correlaciones`, `verificar_cifras`, `calcular_slis` | Funciones puras que se reutilizan en la interfaz, el agente y las pruebas |
+| Imperativo | `cargar_csv`, `main()` | Validaciones paso a paso con control explícito de errores |
+| POO | `DatosIncidentes`, `RegistroConsulta`, `MuestraConsulta` | Contratos de datos con estado |
+| Eventos | reruns y callbacks de Streamlit, `session_state`, invalidación por firma | La interfaz reacciona a cada cambio y descarta respuestas de otra selección |
+
+El porqué de cada decisión está en [docs/DECISIONES.md](docs/DECISIONES.md).
+
+## Observabilidad
+
+La aplicación mide su propio servicio, no el de los incidentes del CSV.
+
+- **Logs JSONL** en `resultados_locales/logs/app.jsonl`: una línea por evento con `ts_utc`,
+  `nivel`, `evento`, `trace_id` y `atributos`.
+- **Traza por consulta.** Cada consulta tiene un `trace_id` y tres spans: selección de herramienta,
+  ejecución de herramienta e interpretación. Así se ve dónde se va el tiempo.
+- **SLI** calculados de los eventos: latencia p50 y p95, tiempo hasta el primer token, tokens por
+  segundo, tasa de error, tasa de respuestas truncadas, tasa de respaldo y proporción de cifras
+  verificadas.
+- **SLO** con presupuesto de error: 95 % de consultas en menos de 90 s, 95 % sin error de Ollama y
+  90 % de cifras presentes en la evidencia.
+- **Privacidad:** el log no guarda el texto de las preguntas ni de las respuestas, solo longitudes y
+  un hash corto.
+
+> Las horas entre apertura y resolución del dataset son una variable histórica de otra
+> organización. **No son SLO, SLA ni MTTR** y no aparecen en la pestaña Observabilidad.
+
+Detalle en [docs/OBSERVABILIDAD.md](docs/OBSERVABILIDAD.md).
+
+## Pruebas
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+Por defecto se excluyen las pruebas marcadas `vivo`, que necesitan Ollama real. Para correrlas, con
+Ollama abierto y el modelo descargado:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -m vivo -v
+```
+
+Comprobaciones adicionales:
+
+```powershell
+.\.venv\Scripts\python.exe -m scripts.validar_datos      # 20.769 incidentes, 220 Critical
+.\.venv\Scripts\python.exe -m scripts.validar_interfaz   # recorre la interfaz sin navegador
+```
+
+Las especificaciones de cada paquete, con sus criterios y los nombres de las pruebas que los
+demuestran, están en [docs/specs/README.md](docs/specs/README.md).
+
+## Solución de problemas
+
+| Síntoma | Primer paso |
+|---|---|
+| `pip install` intenta compilar pandas | El entorno se creó con Python 3.14: bórralo y vuelve a crearlo con `py -3.13 -m venv .venv` |
+| "No se pudo conectar con Ollama" | Abre Ollama desde Inicio y pulsa «Verificar Ollama» |
+| "Modelo no disponible" | `ollama pull llama3.2:3b` |
+| La respuesta tarda mucho | Pulsa «Verificar Ollama» para precalentar el modelo, cierra aplicaciones pesadas o usa `llama3.2:1b` |
+| El puerto 8501 está ocupado | `.\.venv\Scripts\python.exe -m streamlit run app.py --server.port 8502` |
+
+Procedimientos completos (síntoma, diagnóstico, comando y verificación) en
+[docs/RUNBOOK.md](docs/RUNBOOK.md).
+
+## Licencia y atribución
+
+El código se publica con licencia MIT (ver [LICENSE](LICENSE)).
+
+El dataset conserva su propia licencia y atribución: Shinde, V. (2020), *Incident Response Log*
+(versión 2), Kaggle, y Amaral, C., Fantinato, M. y Peres, S. (2018), *Incident management process
+enriched event log*, UCI Machine Learning Repository, https://doi.org/10.24432/C57S4H.
+
+## Autor
+
+Kevin Alexis Barrera Llerena, 2026.
