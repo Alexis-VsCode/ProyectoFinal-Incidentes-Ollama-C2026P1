@@ -70,7 +70,23 @@ unos 7 tokens por segundo en Ollama 0.40.6.
 
 **Decisión.** `llama3.2:3b` es el modelo por defecto. `scripts/comparar_modelos.py` lo compara con
 `llama3.2:1b` sobre las mismas preguntas y mide acierto de herramienta, cifras verificadas,
-respuestas truncadas, errores y latencia. Resultado de la comparación: {{DECISION_MODELO}}
+respuestas truncadas, errores y latencia.
+
+**Resultado medido (18/10/2026, siete preguntas, dos repeticiones por modelo, 28 consultas, 0 errores).**
+
+| Indicador | llama3.2:3b | llama3.2:1b |
+|---|---|---|
+| Acierto de herramienta | 91,7 % | 41,7 % |
+| Cifras citadas presentes en la evidencia | 91 de 91 | 101 de 102 |
+| Mediana de latencia por consulta | 45,5 s | 25,3 s |
+| Velocidad de generación (mediana) | 7,2 tokens/s | 12,6 tokens/s |
+| Rechazo de la pregunta de acción | 100 % | 100 % |
+
+Se mantiene `llama3.2:3b`. El modelo de 1B es 1,8 veces más rápido, pero elige mal la herramienta en
+más de la mitad de las preguntas, y el agente depende de esa elección. Las únicas respuestas
+truncadas del 3B ocurrieron en la pregunta que combina dos herramientas, que solo usa el comparador.
+La comparación corrió en paralelo con otras tareas del equipo; en una corrida aislada de las seis
+preguntas de demostración, el 3B tuvo una mediana de 32,7 s y un p95 de 35,4 s.
 
 **Alternativas.** `qwen2.5:3b` (también admite herramientas, pero su licencia en el tamaño 3B no
 es Apache 2.0 y no aporta a lo que pide la guía).
