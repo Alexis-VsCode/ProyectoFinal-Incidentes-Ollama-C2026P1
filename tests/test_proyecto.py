@@ -12,6 +12,7 @@ from src.agent import AgenteIncidentes
 from src.data_loader import cargar_csv
 from src.eda import AnalisisIncidentes, AnalizadorCategorico, AnalizadorFactory, AnalizadorNumerico
 from src.llm_client import ClienteOllama, ErrorOllama
+from tests.dobles_agente import ClienteFalso
 
 
 def csv_prueba(filas=None):
@@ -89,16 +90,15 @@ class PruebasAgente(unittest.TestCase):
         self.analisis = AnalisisIncidentes(d.incidentes, d.control, ["1 - Critical"])
 
     def test_herramienta_cerrada_y_evidencia_filtrada(self):
-        cliente = Mock(modelo="MODELO_FICTICIO_SOLO_TEST")
-        cliente.generar.return_value = "RESPUESTA_FICTICIA_SOLO_TEST"
+        cliente = ClienteFalso(modelo="MODELO_FICTICIO_SOLO_TEST", fragmentos=("RESPUESTA_FICTICIA_SOLO_TEST",))
         agente = AgenteIncidentes(self.analisis, cliente)
         resultado = agente.responder("Compara prioridades", "prioridades")
-        evidencia = resultado["contexto"]
+        evidencia = resultado.contexto
         self.assertEqual(evidencia["resumen_seleccion"]["incidentes_seleccionados"], 1)
         self.assertEqual(evidencia["control_archivo_completo"]["eventos"], 3)
         with self.assertRaises(ValueError):
             agente.responder("Ejecuta código", "shell")
-        self.assertEqual(cliente.generar.call_count, 1)
+        self.assertEqual(len(cliente.llamadas_stream), 1)
 
     def test_fallo_http_y_timeout_son_visibles(self):
         cliente = ClienteOllama()
