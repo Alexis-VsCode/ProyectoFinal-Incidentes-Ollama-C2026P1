@@ -2,9 +2,13 @@
 
 [![Pruebas](https://github.com/Alexis-VsCode/ProyectoFinal-Incidentes-Ollama-C2026P1/actions/workflows/pruebas.yml/badge.svg)](https://github.com/Alexis-VsCode/ProyectoFinal-Incidentes-Ollama-C2026P1/actions/workflows/pruebas.yml)
 
-Página del proyecto: https://alexis-vscode.github.io/ProyectoFinal-Incidentes-Ollama-C2026P1/
+[![Versión](https://img.shields.io/github/v/release/Alexis-VsCode/ProyectoFinal-Incidentes-Ollama-C2026P1?label=versi%C3%B3n)](https://github.com/Alexis-VsCode/ProyectoFinal-Incidentes-Ollama-C2026P1/releases)
+![Python 3.13](https://img.shields.io/badge/Python-3.13-3776AB)
+![Licencia MIT](https://img.shields.io/badge/licencia-MIT-green)
 
-Video demostrativo: https://youtu.be/luE5Ukz4PAE
+- Página del proyecto: https://alexis-vscode.github.io/ProyectoFinal-Incidentes-Ollama-C2026P1/
+- Video demostrativo: https://youtu.be/luE5Ukz4PAE
+- Versión entregada: [v1.0.0](https://github.com/Alexis-VsCode/ProyectoFinal-Incidentes-Ollama-C2026P1/releases/tag/v1.0.0) (cambios en [CHANGELOG.md](CHANGELOG.md))
 
 Proyecto Final Integrador de *Paradigmas de Programación para Inteligencia Artificial y Análisis de
 Datos* (Universidad Casa Grande, Maestría en Inteligencia Artificial y Ciencia de Datos, C2026 P1).
@@ -12,6 +16,23 @@ Datos* (Universidad Casa Grande, Maestría en Inteligencia Artificial y Ciencia 
 Aplicación modular en Python y Streamlit que analiza un historial público de incidentes de TI y
 consulta a un agente que se ejecuta en el propio equipo con Ollama. Python calcula todas las cifras;
 el modelo elige entre herramientas de lectura autorizadas y redacta la interpretación.
+
+## Resultados medidos
+
+Medidos el 18/10/2026 en el equipo de referencia: Windows 11, Intel Core i9-13900, 16 GB de RAM, sin
+GPU dedicada, Ollama 0.40.6.
+
+| Indicador | Valor |
+|---|---|
+| Incidentes únicos analizados | 20.769 (de 119.998 eventos) |
+| Mediana hasta resolución | 24,6 h (media 187,68 h: cola larga) |
+| Herramienta elegida correctamente por `llama3.2:3b` | 91,7 % (frente a 41,7 % de `llama3.2:1b`) |
+| Cifras de las respuestas presentes en la evidencia | 36 de 36 en la corrida de demostración |
+| Latencia por consulta (mediana / p95) | 32,7 s / 35,4 s |
+| Pruebas automatizadas | 519 con pytest, en Windows y Linux mediante GitHub Actions |
+
+La comparación completa de modelos y su criterio de decisión están en
+[docs/DECISIONES.md](docs/DECISIONES.md).
 
 ## Qué problema resuelve y para quién
 
