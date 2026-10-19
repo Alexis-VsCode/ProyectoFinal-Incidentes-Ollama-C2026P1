@@ -4,6 +4,8 @@
 
 Página del proyecto: https://alexis-vscode.github.io/ProyectoFinal-Incidentes-Ollama-C2026P1/
 
+Video demostrativo: https://youtu.be/luE5Ukz4PAE
+
 Proyecto Final Integrador de *Paradigmas de Programación para Inteligencia Artificial y Análisis de
 Datos* (Universidad Casa Grande, Maestría en Inteligencia Artificial y Ciencia de Datos, C2026 P1).
 

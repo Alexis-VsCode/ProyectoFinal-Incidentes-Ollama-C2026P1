@@ -5,6 +5,7 @@ title: Análisis de incidentes TI con un agente local
 Proyecto Final Integrador de *Paradigmas de Programación para Inteligencia Artificial y Análisis de Datos*, Maestría en Inteligencia Artificial y Ciencia de Datos, Universidad Casa Grande, C2026 P1. Autor: Kevin Alexis Barrera Llerena.
 
 - Código fuente y guía de instalación: [repositorio en GitHub](https://github.com/Alexis-VsCode/ProyectoFinal-Incidentes-Ollama-C2026P1)
+- Video demostrativo: [YouTube](https://youtu.be/luE5Ukz4PAE)
 - Estado de las pruebas automáticas: [GitHub Actions](https://github.com/Alexis-VsCode/ProyectoFinal-Incidentes-Ollama-C2026P1/actions/workflows/pruebas.yml)
 
 La aplicación se ejecuta en el equipo del usuario, porque el agente usa un modelo local con Ollama. Esta página resume el proyecto; no ejecuta la aplicación.
